@@ -9,6 +9,7 @@ from tkinter import messagebox, scrolledtext
 
 from . import classifier as C
 from .config import Config, load_config
+from .control import ControlServer, consume_autostart_flag
 from .report import build_digest, fmt_duration, write_report
 from .session import StudySession
 
@@ -63,7 +64,7 @@ class ColorButton(tk.Label):
 
 
 class App:
-    def __init__(self, cfg: Config):
+    def __init__(self, cfg: Config, autostart: bool = False):
         self.cfg = cfg
         self.session = None
         self.root = tk.Tk()
@@ -94,7 +95,11 @@ class App:
 
         self.ai_label = tk.Label(self.root, text="", font=(FONT, 11), fg="#777", wraplength=420)
         self.ai_label.pack(side="bottom", pady=8)
+        self.control = ControlServer()
         self.refresh()
+        self.poll_commands()
+        if autostart or consume_autostart_flag():
+            self.root.after(500, self.toggle)
 
     def toggle(self):
         if self.session is None:
@@ -103,7 +108,9 @@ class App:
             self.btn.set("■ 结束学习模式", "#c62828")
             if self.session.errors:
                 head = "" if self.session.ai_enabled else "AI 屏幕分析未启用，将只根据窗口标题判断。\n\n"
-                messagebox.showwarning("提示", head + "\n\n".join(self.session.errors))
+                # 延后弹窗：弹窗会阻塞界面线程，先让 Siri 的命令拿到回复
+                errors = head + "\n\n".join(self.session.errors)
+                self.root.after(300, lambda: messagebox.showwarning("提示", errors))
         else:
             session, self.session = self.session, None
             self.btn.set("正在生成学习总结…", "#757575", enabled=False)
@@ -124,6 +131,44 @@ class App:
         text.config(state="disabled")
         text.pack(fill="both", expand=True)
         tk.Button(win, text="打开报告文件夹", command=lambda: open_path(os.path.dirname(os.path.abspath(path)))).pack(pady=6)
+        # 报告窗口弹到最前面（用 Siri 结束时，程序可能在后台）
+        win.lift()
+        win.attributes("-topmost", True)
+        win.after(1500, lambda: win.attributes("-topmost", False))
+        win.focus_force()
+
+    # ---------- Siri / 快捷指令 / 命令行遥控 ----------
+    def poll_commands(self):
+        self.control.process_pending(self.handle_command)
+        self.root.after(200, self.poll_commands)
+
+    def _stats_sentence(self, s: StudySession) -> str:
+        totals = s.totals()
+        distracted = sum(totals.get(k, 0) for k in C.DISTRACTED)
+        text = f"已进行{fmt_duration(s.elapsed())}，真正学习{fmt_duration(totals.get(C.STUDY, 0))}，分心{fmt_duration(distracted)}"
+        if totals.get(C.GAME, 0) >= 60:
+            text += f"，其中打游戏{fmt_duration(totals[C.GAME])}"
+        return text + "。"
+
+    def handle_command(self, cmd: str) -> str:
+        if cmd == "start":
+            if self.session is not None:
+                return "学习模式已经在进行中。" + self._stats_sentence(self.session)
+            if not self.btn.enabled:
+                return "上一次的学习报告还在生成，请稍等几秒再试。"
+            self.toggle()
+            return "学习模式已开始，我会盯着你的屏幕，加油！"
+        if cmd == "stop":
+            if self.session is None:
+                return "现在没有在学习模式中。"
+            reply = "学习模式已结束。" + self._stats_sentence(self.session) + "详细的学习总结正在生成，稍后会弹出来。"
+            self.toggle()
+            return reply
+        if cmd == "status":
+            if self.session is None:
+                return "现在没有在学习模式中。"
+            return self._stats_sentence(self.session)
+        return f"不认识的命令：{cmd}"
 
     def refresh(self):
         s = self.session
@@ -158,5 +203,5 @@ class App:
         self.root.mainloop()
 
 
-def run_gui():
-    App(load_config()).run()
+def run_gui(autostart: bool = False):
+    App(load_config(), autostart=autostart).run()

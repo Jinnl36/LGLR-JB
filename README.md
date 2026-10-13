@@ -39,11 +39,34 @@ cd 项目文件夹
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 python -m study_monitor          # 打开窗口，点「开始学习模式」/「结束学习模式」
+python -m study_monitor start    # 开始学习模式（stop 结束、status 查看进度）
 python -m study_monitor --cli    # 命令行模式，Ctrl+C 结束
 python -m study_monitor --init   # 生成 config.json，可自定义关键词和频率
 ```
 
 报告保存在 `reports/学习报告_日期_时间.md`，同名的 `.json` 文件是原始计时数据。
+
+## 用 Siri 开始 / 结束学习模式
+
+设置好以后，说 **“嘿 Siri，开始学习模式”** 就会打开程序并开始计时（程序没开会自动打开）；
+说 **“嘿 Siri，结束学习模式”**，Siri 会念出这次学了多久、分心多久，详细报告随后弹出来。
+
+**先找到 `siri.sh` 的完整路径**：打开「终端」，输入 `ls ` （ls 后面有个空格），把项目文件夹里的 `siri.sh` 拖进终端窗口，就会显示路径，例如 `/Users/你的名字/LGLR-JB/siri.sh`。
+
+**在「快捷指令」App 里建三个快捷指令**（第一次要先开：快捷指令 → 设置 → 高级 → 勾选「允许运行脚本」）：
+
+| 快捷指令名字（就是对 Siri 说的话） | 「运行 Shell 脚本」里填 |
+|---|---|
+| 开始学习模式 | `/Users/你的名字/LGLR-JB/siri.sh start` |
+| 结束学习模式 | `/Users/你的名字/LGLR-JB/siri.sh stop` |
+| 学习进度 | `/Users/你的名字/LGLR-JB/siri.sh status` |
+
+每个快捷指令的做法：
+1. 点右上角「+」新建，在右侧搜索并添加「**运行 Shell 脚本**」，把上表对应的那一行粘进去（路径换成你自己的）。
+2. 再添加「**朗读文本**」，文本选上一步的「Shell 脚本结果」—— Siri 就会把结果念出来。
+3. 点顶部的名字，改成上表里的名字。
+
+也可以直接在终端里用：`./siri.sh start`、`./siri.sh stop`、`./siri.sh status`。
 
 ## 自定义（config.json）
 
