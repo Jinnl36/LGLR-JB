@@ -43,6 +43,19 @@ def _default_study_keywords() -> List[str]:
         "学堂在线", "网易公开课", "中国大学", "wikipedia", "维基", "百度百科", "chatgpt", "claude",
         "课程", "教程", "讲义", "作业", "笔记", "学习", "lecture", "tutorial", "course", "homework",
         "词典", "dictionary", "translate", "翻译", "百词斩", "不背单词", "扇贝",
+        # macOS 软件
+        "xcode", "iterm", "keynote", "marginnote", "notability", "pdf expert", "skim", "欧路词典",
+    ]
+
+
+def _default_study_apps() -> List[str]:
+    """按进程名「完全一致」匹配的学习软件（不区分大小写）。
+    macOS 上很多软件的窗口标题不带软件名（比如 VS Code 只显示文件名），所以按进程名认。"""
+    return [
+        "code", "cursor", "xcode", "terminal", "终端", "iterm2", "pycharm", "idea", "goland",
+        "preview", "预览", "notes", "备忘录", "pages", "numbers", "keynote", "microsoft word",
+        "microsoft excel", "microsoft powerpoint", "wps office", "notion", "obsidian", "anki",
+        "zotero", "marginnote 3", "marginnote 4", "goodnotes", "notability", "dictionary", "词典",
     ]
 
 
@@ -65,6 +78,7 @@ class Config:
     game_keywords: List[str] = field(default_factory=_default_game_keywords)
     entertainment_keywords: List[str] = field(default_factory=_default_entertainment_keywords)
     study_keywords: List[str] = field(default_factory=_default_study_keywords)
+    study_apps: List[str] = field(default_factory=_default_study_apps)
 
 
 def load_config(path: str = CONFIG_PATH) -> Config:

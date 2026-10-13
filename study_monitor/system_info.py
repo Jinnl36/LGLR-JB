@@ -121,3 +121,41 @@ def running_process_names() -> set:
         if name:
             names.add(name)
     return names
+
+
+def check_macos_permissions() -> list:
+    """检查 macOS 的「屏幕录制」和「辅助功能」权限，返回缺少的权限说明。
+
+    没有屏幕录制权限时，截图只会拍到桌面壁纸；没有辅助功能权限时拿不到窗口标题。
+    权限是授予给「启动本程序的应用」的，一般是「终端」。"""
+    if SYSTEM != "Darwin":
+        return []
+    import ctypes
+    import ctypes.util
+
+    problems = []
+    try:
+        cg = ctypes.cdll.LoadLibrary(ctypes.util.find_library("CoreGraphics"))
+        cg.CGPreflightScreenCaptureAccess.restype = ctypes.c_bool
+        cg.CGRequestScreenCaptureAccess.restype = ctypes.c_bool
+        if not cg.CGPreflightScreenCaptureAccess():
+            cg.CGRequestScreenCaptureAccess()  # 弹出系统授权提示
+            problems.append("缺少「屏幕录制」权限：系统设置 → 隐私与安全性 → 屏幕与系统录音，勾选「终端」后重启终端。")
+    except Exception:
+        pass
+    try:
+        ax = ctypes.cdll.LoadLibrary(ctypes.util.find_library("ApplicationServices"))
+        ax.AXIsProcessTrusted.restype = ctypes.c_bool
+        if not ax.AXIsProcessTrusted():
+            problems.append("缺少「辅助功能」权限：系统设置 → 隐私与安全性 → 辅助功能，打开「终端」后重启终端。")
+    except Exception:
+        pass
+    try:
+        r = subprocess.run(["osascript", "-e", 'tell application "System Events" to get name of first '
+                            'application process whose frontmost is true'], capture_output=True, text=True, timeout=10)
+        ok = r.returncode == 0
+    except Exception:
+        ok = False
+    if not ok:
+        problems.append("缺少「自动化」权限：系统设置 → 隐私与安全性 → 自动化，允许「终端」控制「System Events」。")
+    return problems

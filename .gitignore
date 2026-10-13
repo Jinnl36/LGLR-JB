@@ -3,3 +3,4 @@ __pycache__/
 reports/
 config.json
 .venv/
+api_key.txt

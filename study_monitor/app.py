@@ -12,6 +12,9 @@ from .config import Config, load_config
 from .report import build_digest, fmt_duration, write_report
 from .session import StudySession
 
+# macOS 用苹方，Windows 用微软雅黑
+FONT = "PingFang SC" if platform.system() == "Darwin" else "Microsoft YaHei"
+
 COLORS = {
     C.STUDY: "#2e7d32",
     C.GAME: "#c62828",
@@ -45,24 +48,37 @@ def open_path(path: str) -> None:
         pass
 
 
+class ColorButton(tk.Label):
+    """彩色按钮。macOS 的 tk.Button 会忽略背景色（白字白底看不见），所以用 Label 自己画。"""
+
+    def __init__(self, master, command, **kw):
+        super().__init__(master, cursor="hand2", fg="white", **kw)
+        self.command = command
+        self.enabled = True
+        self.bind("<Button-1>", lambda e: self.enabled and self.command())
+
+    def set(self, text: str, color: str, enabled: bool = True):
+        self.enabled = enabled
+        self.config(text=text, bg=color, cursor="hand2" if enabled else "arrow")
+
+
 class App:
     def __init__(self, cfg: Config):
         self.cfg = cfg
         self.session = None
         self.root = tk.Tk()
         self.root.title("学习监督器")
-        self.root.geometry("460x380")
-        self.root.attributes("-topmost", False)
+        self.root.geometry("480x420")
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
 
-        font = ("Microsoft YaHei", 11)
-        self.btn = tk.Button(self.root, text="▶ 开始学习模式", font=("Microsoft YaHei", 16, "bold"),
-                             bg="#2e7d32", fg="white", activebackground="#1b5e20", command=self.toggle)
-        self.btn.pack(fill="x", padx=16, pady=(16, 8), ipady=8)
+        font = (FONT, 13)
+        self.btn = ColorButton(self.root, self.toggle, font=(FONT, 18, "bold"))
+        self.btn.set("▶ 开始学习模式", "#2e7d32")
+        self.btn.pack(fill="x", padx=16, pady=(16, 8), ipady=10)
 
-        self.status = tk.Label(self.root, text="未开始", font=("Microsoft YaHei", 14, "bold"), fg="#546e7a")
+        self.status = tk.Label(self.root, text="未开始", font=(FONT, 16, "bold"), fg="#546e7a")
         self.status.pack(pady=4)
-        self.window_label = tk.Label(self.root, text="", font=("Microsoft YaHei", 9), fg="#777", wraplength=420)
+        self.window_label = tk.Label(self.root, text="", font=(FONT, 11), fg="#777", wraplength=420)
         self.window_label.pack()
 
         grid = tk.Frame(self.root)
@@ -76,7 +92,7 @@ class App:
             v.grid(row=r, column=1, sticky="e")
             self.values[key] = v
 
-        self.ai_label = tk.Label(self.root, text="", font=("Microsoft YaHei", 9), fg="#777", wraplength=420)
+        self.ai_label = tk.Label(self.root, text="", font=(FONT, 11), fg="#777", wraplength=420)
         self.ai_label.pack(side="bottom", pady=8)
         self.refresh()
 
@@ -84,13 +100,13 @@ class App:
         if self.session is None:
             self.session = StudySession(self.cfg)
             self.session.start()
-            self.btn.config(text="■ 结束学习模式", bg="#c62828", activebackground="#8e0000")
-            if not self.session.ai_enabled:
-                messagebox.showinfo("提示", "AI 屏幕分析未启用，将只根据窗口标题判断。\n\n"
-                                    + "\n".join(self.session.errors))
+            self.btn.set("■ 结束学习模式", "#c62828")
+            if self.session.errors:
+                head = "" if self.session.ai_enabled else "AI 屏幕分析未启用，将只根据窗口标题判断。\n\n"
+                messagebox.showwarning("提示", head + "\n\n".join(self.session.errors))
         else:
             session, self.session = self.session, None
-            self.btn.config(text="正在生成学习总结…", state="disabled", bg="#757575")
+            self.btn.set("正在生成学习总结…", "#757575", enabled=False)
             threading.Thread(target=self._finish, args=(session,), daemon=True).start()
 
     def _finish(self, session):
@@ -98,11 +114,11 @@ class App:
         self.root.after(0, lambda: self._show_report(path))
 
     def _show_report(self, path):
-        self.btn.config(text="▶ 开始学习模式", state="normal", bg="#2e7d32", activebackground="#1b5e20")
+        self.btn.set("▶ 开始学习模式", "#2e7d32")
         win = tk.Toplevel(self.root)
         win.title("学习报告")
         win.geometry("720x640")
-        text = scrolledtext.ScrolledText(win, wrap="word", font=("Microsoft YaHei", 10))
+        text = scrolledtext.ScrolledText(win, wrap="word", font=(FONT, 13))
         with open(path, encoding="utf-8") as f:
             text.insert("1.0", f.read())
         text.config(state="disabled")
@@ -129,7 +145,7 @@ class App:
                 self.ai_label.config(text="AI 正在观察两块屏幕…")
             if s.errors:
                 self.ai_label.config(text=s.errors[-1][:160])
-        elif self.btn["state"] == "normal":
+        elif self.btn.enabled:
             self.status.config(text="未开始", fg=COLORS[C.OTHER])
         self.root.after(1000, self.refresh)
 

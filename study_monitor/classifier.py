@@ -42,4 +42,7 @@ def classify_window(window: WindowInfo, cfg: Config) -> tuple:
     kw = _match(text, cfg.study_keywords)
     if kw:
         return STUDY, kw
+    process = window.process.lower()
+    if process and process in {a.lower() for a in cfg.study_apps}:
+        return STUDY, window.process
     return OTHER, ""

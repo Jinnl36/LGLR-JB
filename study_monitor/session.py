@@ -11,7 +11,7 @@ import anthropic
 
 from . import classifier as C
 from .config import Config
-from .system_info import WindowInfo, get_active_window, get_idle_seconds
+from .system_info import WindowInfo, check_macos_permissions, get_active_window, get_idle_seconds
 
 # AI 判断的把握度高于这个值时，覆盖规则判断
 AI_OVERRIDE_CONFIDENCE = 0.6
@@ -61,6 +61,7 @@ class StudySession:
         self._last_ai_time = 0.0
         self._ai_busy = False
 
+        self.errors.extend(check_macos_permissions())
         if cfg.ai_interval_sec > 0:
             try:
                 from .ai_analyzer import ClaudeAnalyzer

@@ -17,28 +17,27 @@
 
 AI 判断会修正规则判断：规则认不出的窗口交给 AI 定；前台一直是同一个学习窗口、但副屏在放直播或游戏，这段时间也会算成分心。
 
-## 安装
+## 安装和启动（Mac）
 
-需要 Python 3.10 及以上（Windows 安装 Python 时请勾选 tcl/tk，默认就会勾选）。
+1. **装 Python**：从 https://www.python.org/downloads/macos/ 下载安装包装好（自带图形界面库）。
+   用 Homebrew 装的 Python 还要执行一次 `brew install python-tk`。
+2. **填 Claude API Key**（在 https://console.anthropic.com 申请）：在项目文件夹里新建 `api_key.txt`，把 key（`sk-ant-...`）粘进去保存。
+   没有 key 也能用，只是只按窗口标题判断，报告里“学到了什么”会改为列出学习时用得最多的窗口。
+3. **双击 `start_mac.command`**。第一次会自动安装依赖，然后弹出窗口。
+   如果提示“无法验证开发者”，右键 → 打开 → 打开。
+4. **授予权限**（只需一次，授给「终端」）：系统设置 → 隐私与安全性 →
+   - **屏幕与系统录音**：勾选「终端」（没有这个权限，截图只能拍到桌面壁纸）
+   - **辅助功能**：打开「终端」（没有这个权限拿不到窗口标题）
+   - **自动化**：允许「终端」控制「System Events」
+
+   改完权限后要**完全退出终端（⌘Q）再重新打开**。程序启动时会自动检查，缺哪个会弹窗提醒。
+
+也可以在终端里手动运行：
 
 ```bash
+cd 项目文件夹
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-```
-
-配置 Claude API Key（在 https://console.anthropic.com 申请）：
-
-```bash
-# Windows PowerShell
-setx ANTHROPIC_API_KEY "sk-ant-..."
-# macOS / Linux
-export ANTHROPIC_API_KEY="sk-ant-..."
-```
-
-没有 API Key 也能用：只按窗口标题判断，报告里“学到了什么”会改为列出学习时用得最多的窗口。
-
-## 使用
-
-```bash
 python -m study_monitor          # 打开窗口，点「开始学习模式」/「结束学习模式」
 python -m study_monitor --cli    # 命令行模式，Ctrl+C 结束
 python -m study_monitor --init   # 生成 config.json，可自定义关键词和频率
@@ -56,13 +55,13 @@ python -m study_monitor --init   # 生成 config.json，可自定义关键词和
 | `model` | `claude-opus-5-5` | 使用的 Claude 模型 |
 | `screenshot_max_width` | 1280 | 截图缩放宽度，越小越省钱 |
 | `save_screenshots` | false | 是否把截图存到 `reports/screenshots/` |
-| `game_keywords` / `entertainment_keywords` / `study_keywords` | 见代码 | 窗口标题或进程名包含这些词就归为对应类别（游戏 > 娱乐 > 学习） |
+| `game_keywords` / `entertainment_keywords` / `study_keywords` | 见代码 | 窗口标题或程序名包含这些词就归为对应类别（游戏 > 娱乐 > 学习） |
+| `study_apps` | 见代码 | 程序名完全一致就算学习（如 Code、Xcode、预览、备忘录、终端）。Mac 上很多软件的窗口标题不带软件名，靠这个识别 |
 
-## 各平台说明
+## 其他系统
 
-- **Windows**：开箱即用（前台窗口和空闲时间检测都支持）。
-- **macOS**：首次运行需在「系统设置 → 隐私与安全性」里给终端开启**屏幕录制**和**辅助功能**权限。
-- **Linux（X11）**：需要安装 `xdotool`（获取前台窗口）和 `xprintidle`（空闲时间）。
+- **Windows**：也能用。装好 Python 后执行 `pip install -r requirements.txt`、`python -m study_monitor`，不需要额外权限。
+- **Linux（X11）**：需要额外安装 `xdotool`（获取前台窗口）和 `xprintidle`（空闲时间）。
 
 ## 隐私
 

@@ -2,6 +2,7 @@
 
 import base64
 import json
+import os
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -65,9 +66,23 @@ class ScreenVerdict:
     reason: str
 
 
+API_KEY_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "api_key.txt")
+
+
+def _make_client() -> anthropic.Anthropic:
+    """优先用环境变量 ANTHROPIC_API_KEY；没有的话读项目目录下的 api_key.txt
+    （双击 start_mac.command 启动时不一定能读到 ~/.zshrc 里的环境变量）。"""
+    if not os.environ.get("ANTHROPIC_API_KEY") and os.path.exists(API_KEY_FILE):
+        with open(API_KEY_FILE, encoding="utf-8") as f:
+            key = f.read().strip()
+        if key:
+            return anthropic.Anthropic(api_key=key)
+    return anthropic.Anthropic()
+
+
 class ClaudeAnalyzer:
     def __init__(self, model: str):
-        self.client = anthropic.Anthropic()
+        self.client = _make_client()
         self.model = model
 
     def analyze_screens(self, shots: List[ScreenShot], active_window: str) -> Optional[ScreenVerdict]:
